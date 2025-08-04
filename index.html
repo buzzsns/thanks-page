@@ -1,59 +1,130 @@
-<script>
-  const canvas = document.getElementById("confettiCanvas");
-  const ctx = canvas.getContext("2d");
-  let width = canvas.width = window.innerWidth;
-  let height = canvas.height = window.innerHeight;
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ご登録ありがとうございました！</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #ffffff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    h1 {
+      font-size: 2rem;
+      color: #333;
+      margin: 20px;
+    }
+    .button {
+      padding: 15px 30px;
+      background: #ff69b4;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 30px;
+      font-size: 1.2rem;
+      margin-top: 20px;
+      transition: background 0.3s;
+      display: inline-block;
+    }
+    .button:hover {
+      background: #ff1493;
+    }
+    .note {
+      font-size: 0.9rem;
+      color: #666;
+      margin-top: 10px;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -1;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>ご登録ありがとうございました！</h1>
+  <a class="button" href="https://example.com" target="_blank">▶ 講義をみる</a>
+  <div class="note">※講義視聴には新規登録が必要です</div>
 
-  window.addEventListener('resize', () => {
-    width = canvas.width = window.innerWidth;
-    height = canvas.height = window.innerHeight;
-  });
+  <canvas id="confettiCanvas"></canvas>
 
-  const confettiCount = 60;
-  const confetti = [];
+  <script>
+    window.addEventListener("load", () => {
+      const canvas = document.getElementById("confettiCanvas");
+      const ctx = canvas.getContext("2d");
+      let width = canvas.width = window.innerWidth;
+      let height = canvas.height = window.innerHeight;
 
-  for (let i = 0; i < confettiCount; i++) {
-    confetti.push({
-      x: Math.random() * width,
-      y: Math.random() * height - height,
-      r: Math.random() * 5 + 2,
-      d: Math.random() * confettiCount,
-      color: `hsl(${Math.random() * 360}, 100%, 70%)`,
-      tilt: Math.random() * 10 - 5,
-      tiltAngle: 0,
-      tiltAngleIncrement: Math.random() * 0.05 + 0.01
-    });
-  }
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
 
-  function draw() {
-    ctx.clearRect(0, 0, width, height);
-    confetti.forEach((c) => {
-      ctx.beginPath();
-      ctx.lineWidth = c.r;
-      ctx.strokeStyle = c.color;
-      ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
-      ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
-      ctx.stroke();
-    });
+      const confettiCount = 60;
+      const confetti = [];
 
-    update();
-    requestAnimationFrame(draw);
-  }
-
-  function update() {
-    confetti.forEach((c, i) => {
-      c.tiltAngle += c.tiltAngleIncrement;
-      c.y += (Math.cos(c.d) + 3 + c.r / 2) * 0.3;
-      c.x += Math.sin(c.d) * 0.3;
-      c.tilt = Math.sin(c.tiltAngle) * 5;
-
-      if (c.y > height + 20) {
-        confetti[i] = {
+      for (let i = 0; i < confettiCount; i++) {
+        confetti.push({
           x: Math.random() * width,
-          y: -10,
-          r: c.r,
-          d: c.d,
-          color: c.color,
-          tilt: c.tilt,
+          y: Math.random() * height - height,
+          r: Math.random() * 5 + 2,
+          d: Math.random() * confettiCount,
+          color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+          tilt: Math.random() * 10 - 5,
           tiltAngle: 0,
-          tiltAngleIncremen
+          tiltAngleIncrement: Math.random() * 0.05 + 0.01
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+        confetti.forEach((c) => {
+          ctx.beginPath();
+          ctx.lineWidth = c.r;
+          ctx.strokeStyle = c.color;
+          ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
+          ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
+          ctx.stroke();
+        });
+
+        update();
+        requestAnimationFrame(draw);
+      }
+
+      function update() {
+        confetti.forEach((c, i) => {
+          c.tiltAngle += c.tiltAngleIncrement;
+          c.y += (Math.cos(c.d) + 3 + c.r / 2) * 0.3;
+          c.x += Math.sin(c.d) * 0.3;
+          c.tilt = Math.sin(c.tiltAngle) * 5;
+
+          if (c.y > height + 20) {
+            confetti[i] = {
+              x: Math.random() * width,
+              y: -10,
+              r: c.r,
+              d: c.d,
+              color: c.color,
+              tilt: c.tilt,
+              tiltAngle: 0,
+              tiltAngleIncrement: c.tiltAngleIncrement
+            };
+          }
+        });
+      }
+
+      requestAnimationFrame(draw);
+    });
+  </script>
+</body>
+</html>
