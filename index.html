@@ -70,6 +70,9 @@
         height = canvas.height = window.innerHeight;
       });
 
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const fallSpeed = isMobile ? 0.9 : 0.8;
+
       const confettiCount = 150;
       const confetti = [];
 
@@ -104,7 +107,7 @@
       function update() {
         confetti.forEach((c, i) => {
           c.tiltAngle += c.tiltAngleIncrement;
-          c.y += (Math.cos(c.d) + 3 + c.r / 2) * 1.0; // ← ここが落下スピード
+          c.y += (Math.cos(c.d) + 3 + c.r / 2) * fallSpeed;
           c.x += Math.sin(c.d);
           c.tilt = Math.sin(c.tiltAngle) * 10;
 
