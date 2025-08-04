@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>ご回答ありがとうございました！</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: "Arial", sans-serif;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #333;
+      margin-bottom: 30px;
+    }
+
+    .button {
+      padding: 15px 30px;
+      background: #ff69b4;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 30px;
+      font-size: 1.2rem;
+      transition: background 0.3s;
+    }
+
+    .button:hover {
+      background: #ff1493;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <h1>ご登録ありがとうございました！</h1>
+  <a class="button" href="https://example.com" target="_blank">▶ 講義を見る</a>
+  <canvas id="canvas"></canvas>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, petals = [];
+    function resizeCanvas() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    function createPetals() {
+      for (let i = 0; i < 100; i++) {
+        petals.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          r: Math.random() * 4 + 2,
+          d: Math.random() * 100,
+          color: `rgba(255, 182, 193, ${Math.random()})`,
+        });
+      }
+    }
+    function drawPetals() {
+      ctx.clearRect(0, 0, width, height);
+      ctx.beginPath();
+      for (let i = 0; i < petals.length; i++) {
+        let p = petals[i];
+        ctx.moveTo(p.x, p.y);
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, true);
+      }
+      ctx.fillStyle = 'pink';
+      ctx.fill();
+      movePetals();
+    }
+    let angle = 0;
+    function movePetals() {
+      angle += 0.01;
+      for (let i = 0; i < petals.length; i++) {
+        let p = petals[i];
+        p.y += Math.cos(angle + p.d) + 1 + p.r / 2;
+        p.x += Math.sin(angle) * 2;
+        if (p.x > width || p.x < 0 || p.y > height) {
+          petals[i] = {
+            x: Math.random() * width,
+            y: -10,
+            r: p.r,
+            d: p.d,
+            color: p.color
+          };
+        }
+      }
+    }
+    createPetals();
+    setInterval(drawPetals, 33);
+  </script>
+</body>
+</html>
