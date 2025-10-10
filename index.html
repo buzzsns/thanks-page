@@ -21,7 +21,10 @@
     h1 { font-size: 2rem; color: #333; margin: 20px; }
     .note { font-size: .9rem; color: #666; margin-top: 10px; }
     canvas {
-      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -43,18 +46,19 @@
 
       // ===== 設定 =====
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const fallSpeed = isMobile ? 0.65 : 0.35;       // 縦方向の基本スピード
+      const fallSpeed = isMobile ? 0.70 : 0.35;       // 縦方向スピード
       const emissionDurationMs = 3000;                // 生成する時間（3秒）
-      const ratePerSec = isMobile ? 140 : 110;        // 1秒あたりの生成数（分散）
-      const maxAlive = 600;                            // 同時在籍上限（安全弁）
-      const spawnTopMargin = 40;                      // 画面上の出現開始位置
-      const spawnSideMargin = 20;                     // 左右に少し余白を持たせる
 
-      // 横風ノイズ（時間でゆっくり変化）
-      const windAmplitude = isMobile ? 0.45 : 0.35;   // 横風の強さ
-      const windFreq = 0.0006;                        // 風の変化速度（小さいほどゆっくり）
+      // 💡 スマホは少なめ設定
+      const ratePerSec = isMobile ? 70 : 120;         // 1秒あたりの生成数
+      const maxAlive = isMobile ? 250 : 600;          // 同時に存在できる最大数
 
-      // キャンバスサイズ
+      // 出現と風の設定
+      const spawnTopMargin = 40;
+      const spawnSideMargin = 20;
+      const windAmplitude = isMobile ? 0.45 : 0.35;
+      const windFreq = 0.0006;
+
       let W = canvas.width = window.innerWidth;
       let H = canvas.height = window.innerHeight;
       window.addEventListener("resize", () => {
@@ -62,32 +66,26 @@
         H = canvas.height = window.innerHeight;
       });
 
-      // 粒データ
       const confetti = [];
       let generating = true;
-
-      // タイム管理（レート制御）
       let startTime = performance.now();
       let lastTime = startTime;
-      let spawnAccumulator = 0; // 何粒生成するかの小数累積
+      let spawnAccumulator = 0;
 
-      // 生成関数（分散＋色相分布）
+      // ===== 紙吹雪生成 =====
       function createPiece() {
-        // 画面全幅＋左右マージン内でランダム出現
         const x = Math.random() * (W + spawnSideMargin * 2) - spawnSideMargin;
-        const y = -spawnTopMargin - Math.random() * 60;  // 画面少し上から
-        const r = Math.random() * 5 + 2.5;               // 太さ抑えめで密度感
-        // 色相をいくつかのクラスタに分けつつランダムで偏りを軽減
+        const y = -spawnTopMargin - Math.random() * 60;
+        const r = Math.random() * 5 + 2.5;
         const hueBases = [10, 45, 180, 220, 290, 330];
         const hue = hueBases[Math.floor(Math.random() * hueBases.length)] + Math.random() * 20 - 10;
         return {
           x, y, r,
-          d: Math.random() * 1000, // 位相
+          d: Math.random() * 1000,
           color: `hsl(${(hue + 360) % 360}, 100%, 70%)`,
           tilt: Math.random() * 10 - 5,
           tiltAngle: Math.random() * Math.PI * 2,
           tiltAngleIncrement: Math.random() * 0.08 + 0.02,
-          // 個体ごとの横風感度と落下係数にばらつき
           windScale: Math.random() * 0.6 + 0.7,
           fallScale: Math.random() * 0.6 + 0.7
         };
@@ -103,12 +101,9 @@
       }
 
       function updatePiece(p, t) {
-        // グローバル風（時間変化）＋個体差
         const wind = Math.sin(t * windFreq + p.d * 0.01) * windAmplitude * p.windScale;
         p.tiltAngle += p.tiltAngleIncrement;
         p.tilt = Math.sin(p.tiltAngle) * 10;
-
-        // 位置更新：横は風、縦は基本速度＋個体差
         p.x += wind + Math.sin(p.d * 0.02) * 0.3;
         p.y += (Math.cos(p.d * 0.02) + 3 + p.r / 2) * fallSpeed * p.fallScale;
       }
@@ -120,18 +115,15 @@
 
         ctx.clearRect(0, 0, W, H);
 
-        // 3秒間は一定レートで少しずつ生成（初期一括生成はしない）
+        // 3秒間、一定レートで生成
         if (generating) {
-          spawnAccumulator += (ratePerSec * dt) / 1000; // 生成予定数を累積
+          spawnAccumulator += (ratePerSec * dt) / 1000;
           let toSpawn = Math.floor(spawnAccumulator);
           spawnAccumulator -= toSpawn;
-
-          // 1フレームで生成しすぎないように上限
           toSpawn = Math.min(toSpawn, 30);
           while (toSpawn-- > 0 && confetti.length < maxAlive) {
             confetti.push(createPiece());
           }
-
           if (elapsed >= emissionDurationMs) generating = false;
         }
 
@@ -140,14 +132,11 @@
           const p = confetti[i];
           updatePiece(p, now);
           drawPiece(p);
-
-          // 画面外に落ち切ったら削除（残さない）
           if (p.y > H + 30) confetti.splice(i, 1);
         }
 
-        // 生成終了後、全て落ち切ったらループ停止（省リソース）
+        // 全て落ち切ったら停止
         if (!generating && confetti.length === 0) return;
-
         requestAnimationFrame(animate);
       }
 
