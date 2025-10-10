@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ご登録ありがとうございます！</title>
   <style>
     body {
@@ -18,39 +18,19 @@
       min-height: 100vh;
       text-align: center;
     }
-
     h1 {
       font-size: 2rem;
       color: #333;
       margin: 20px;
     }
-
-    .button {
-      padding: 15px 30px;
-      background: #ff69b4;
-      color: #fff;
-      text-decoration: none;
-      border-radius: 30px;
-      font-size: 1.2rem;
-      margin-top: 20px;
-      transition: background 0.3s;
-      display: inline-block;
-    }
-
-    .button:hover {
-      background: #ff1493;
-    }
-
     .note {
       font-size: 0.9rem;
       color: #666;
       margin-top: 10px;
     }
-
     canvas {
       position: fixed;
-      top: 0;
-      left: 0;
+      inset: 0;
       z-index: -1;
       pointer-events: none;
     }
@@ -59,11 +39,11 @@
 <body>
   <h1>ご登録ありがとうございます！</h1>
   <div class="note">
-  <p>ご登録いただいたメールアドレス宛に</p>
-  <p>「【マネキャン】アカウント発行完了のお知らせ」という件名でご案内を送りました。</p>
-  <p>もし届いていない場合は、迷惑メールを確認の上で以下のアドレス宛にお問い合わせください</p>
-  <p>メール：monetizecamp@buzzsns.com</p>
-</div>
+    <p>ご登録いただいたメールアドレス宛に</p>
+    <p>「【マネキャン】アカウント発行完了のお知らせ」という件名でご案内を送りました。</p>
+    <p>もし届いていない場合は、迷惑メールを確認の上で以下のアドレス宛にお問い合わせください</p>
+    <p>メール：monetizecamp@buzzsns.com</p>
+  </div>
 
   <canvas id="confettiCanvas"></canvas>
 
@@ -71,26 +51,39 @@
     window.addEventListener("load", () => {
       const canvas = document.getElementById("confettiCanvas");
       const ctx = canvas.getContext("2d");
-      let width = canvas.width = window.innerWidth;
-      let height = canvas.height = window.innerHeight;
 
-      window.addEventListener('resize', () => {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-      });
-
+      // ====== 設定 ======
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const fallSpeed = isMobile ? 0.65 : 0.35; // ← スピード指定：スマホ 0.65、PC 0.35
+      const fallSpeed = isMobile ? 0.75 : 0.35;   // 落下スピード（端末別）
+      const confettiCount = 150;                  // 紙吹雪の数
+      const durationMs = 2000;                    // 何ミリ秒降らせるか（2秒）
+      const enableFadeOut = false;                // trueで停止後にフェードアウト
+      const fadeOutDelayMs = 500;                 // 停止後フェード開始までの待ち時間
+      const fadeOutDurationMs = 800;              // フェードにかける時間
 
-      const confettiCount = 150;
+      // ====== 画面サイズ & 高解像度対応 ======
+      let vw = 0, vh = 0, dpr = Math.max(1, window.devicePixelRatio || 1);
+      function resizeCanvas() {
+        vw = window.innerWidth;
+        vh = window.innerHeight;
+        dpr = Math.max(1, window.devicePixelRatio || 1);
+        canvas.style.width = vw + "px";
+        canvas.style.height = vh + "px";
+        canvas.width = Math.floor(vw * dpr);
+        canvas.height = Math.floor(vh * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // 論理pxで描画
+      }
+      window.addEventListener("resize", resizeCanvas);
+      resizeCanvas();
+
+      // ====== 紙吹雪の初期化 ======
       const confetti = [];
-
       for (let i = 0; i < confettiCount; i++) {
         confetti.push({
-          x: Math.random() * width,
-          y: Math.random() * height - height,
-          r: Math.random() * 6 + 4,
-          d: Math.random() * confettiCount,
+          x: Math.random() * vw,
+          y: Math.random() * vh - vh,                // 画面上から出現
+          r: Math.random() * 6 + 4,                  // 太さ
+          d: Math.random() * confettiCount,          // 振れの位相
           color: `hsl(${Math.random() * 360}, 100%, 70%)`,
           tilt: Math.random() * 10 - 5,
           tiltAngle: 0,
@@ -98,41 +91,70 @@
         });
       }
 
+      // ====== 進行管理 ======
+      let isFalling = true;        // これがfalseになると落下停止
+      let globalAlpha = 1;         // フェード用
+
+      // 2秒後に落下を止める
+      setTimeout(() => {
+        isFalling = false;
+
+        if (enableFadeOut) {
+          // 少し待ってからフェードアウト開始
+          setTimeout(() => {
+            const start = performance.now();
+            const tick = (t) => {
+              const el = t - start;
+              const p = Math.min(1, el / fadeOutDurationMs);
+              globalAlpha = 1 - p;
+              if (p < 1) {
+                requestAnimationFrame(tick);
+              } else {
+                // 完全に透明になったら画面をクリア
+                ctx.clearRect(0, 0, vw, vh);
+              }
+            };
+            requestAnimationFrame(tick);
+          }, fadeOutDelayMs);
+        }
+      }, durationMs);
+
+      // ====== 描画ループ ======
       function draw() {
-        ctx.clearRect(0, 0, width, height);
-        confetti.forEach((c) => {
+        ctx.clearRect(0, 0, vw, vh);
+
+        // フェード中はglobalAlphaを適用
+        if (enableFadeOut) ctx.globalAlpha = globalAlpha;
+
+        for (const c of confetti) {
           ctx.beginPath();
           ctx.lineWidth = c.r;
           ctx.strokeStyle = c.color;
           ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
           ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
           ctx.stroke();
-        });
+        }
 
-        update();
+        if (enableFadeOut) ctx.globalAlpha = 1; // 他描画への影響を避ける
+
+        if (isFalling) update();
         requestAnimationFrame(draw);
       }
 
+      // ====== 位置更新 ======
       function update() {
-        confetti.forEach((c, i) => {
+        for (const c of confetti) {
           c.tiltAngle += c.tiltAngleIncrement;
-          c.y += (Math.cos(c.d) + 3 + c.r / 2) * fallSpeed;
-          c.x += Math.sin(c.d);
+          c.y += (Math.cos(c.d) + 3 + c.r / 2) * fallSpeed; // 縦移動
+          c.x += Math.sin(c.d);                              // 横揺れ
           c.tilt = Math.sin(c.tiltAngle) * 10;
 
-          if (c.y > height) {
-            confetti[i] = {
-              x: Math.random() * width,
-              y: -10,
-              r: c.r,
-              d: c.d,
-              color: c.color,
-              tilt: c.tilt,
-              tiltAngle: 0,
-              tiltAngleIncrement: c.tiltAngleIncrement
-            };
+          // 画面外に落ちたら上から再出現（停止時は行わないのでOK）
+          if (c.y > vh) {
+            c.y = -10;
+            c.x = Math.random() * vw;
           }
-        });
+        }
       }
 
       requestAnimationFrame(draw);
@@ -140,3 +162,4 @@
   </script>
 </body>
 </html>
+
