@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ご登録ありがとうございます！</title>
   <style>
     body {
@@ -18,19 +18,23 @@
       min-height: 100vh;
       text-align: center;
     }
+
     h1 {
       font-size: 2rem;
       color: #333;
       margin: 20px;
     }
+
     .note {
       font-size: 0.9rem;
       color: #666;
       margin-top: 10px;
     }
+
     canvas {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
       z-index: -1;
       pointer-events: none;
     }
@@ -52,114 +56,88 @@
       const canvas = document.getElementById("confettiCanvas");
       const ctx = canvas.getContext("2d");
 
-      // ====== 設定 ======
+      // ===== 設定 =====
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const fallSpeed = isMobile ? 0.65 : 0.35;   // 落下スピード（端末別）
-      const confettiCount = 150;                  // 紙吹雪の数
-      const durationMs = 2000;                    // 何ミリ秒降らせるか（2秒）
-      const enableFadeOut = false;                // trueで停止後にフェードアウト
-      const fadeOutDelayMs = 500;                 // 停止後フェード開始までの待ち時間
-      const fadeOutDurationMs = 800;              // フェードにかける時間
+      const fallSpeed = isMobile ? 0.65 : 0.35; // 紙吹雪の落下スピード
+      const confettiCount = 150; // 紙吹雪の数
+      const durationMs = 3000; // 紙吹雪を出し続ける時間（3秒）
 
-      // ====== 画面サイズ & 高解像度対応 ======
-      let vw = 0, vh = 0, dpr = Math.max(1, window.devicePixelRatio || 1);
-      function resizeCanvas() {
-        vw = window.innerWidth;
-        vh = window.innerHeight;
-        dpr = Math.max(1, window.devicePixelRatio || 1);
-        canvas.style.width = vw + "px";
-        canvas.style.height = vh + "px";
-        canvas.width = Math.floor(vw * dpr);
-        canvas.height = Math.floor(vh * dpr);
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // 論理pxで描画
-      }
-      window.addEventListener("resize", resizeCanvas);
-      resizeCanvas();
+      let width = (canvas.width = window.innerWidth);
+      let height = (canvas.height = window.innerHeight);
 
-      // ====== 紙吹雪の初期化 ======
+      window.addEventListener("resize", () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
       const confetti = [];
-      for (let i = 0; i < confettiCount; i++) {
-        confetti.push({
-          x: Math.random() * vw,
-          y: Math.random() * vh - vh,                // 画面上から出現
-          r: Math.random() * 6 + 4,                  // 太さ
-          d: Math.random() * confettiCount,          // 振れの位相
+      let isGenerating = true; // 紙吹雪を出す期間
+
+      // ===== 紙吹雪を作る関数 =====
+      function createConfettiPiece() {
+        return {
+          x: Math.random() * width,
+          y: -10,
+          r: Math.random() * 6 + 4,
+          d: Math.random() * confettiCount,
           color: `hsl(${Math.random() * 360}, 100%, 70%)`,
           tilt: Math.random() * 10 - 5,
           tiltAngle: 0,
           tiltAngleIncrement: Math.random() * 0.1 + 0.05
-        });
+        };
       }
 
-      // ====== 進行管理 ======
-      let isFalling = true;        // これがfalseになると落下停止
-      let globalAlpha = 1;         // フェード用
+      // 初期生成
+      for (let i = 0; i < confettiCount; i++) {
+        confetti.push(createConfettiPiece());
+      }
 
-      // 2秒後に落下を止める
-      setTimeout(() => {
-        isFalling = false;
-
-        if (enableFadeOut) {
-          // 少し待ってからフェードアウト開始
-          setTimeout(() => {
-            const start = performance.now();
-            const tick = (t) => {
-              const el = t - start;
-              const p = Math.min(1, el / fadeOutDurationMs);
-              globalAlpha = 1 - p;
-              if (p < 1) {
-                requestAnimationFrame(tick);
-              } else {
-                // 完全に透明になったら画面をクリア
-                ctx.clearRect(0, 0, vw, vh);
-              }
-            };
-            requestAnimationFrame(tick);
-          }, fadeOutDelayMs);
-        }
-      }, durationMs);
-
-      // ====== 描画ループ ======
+      // ===== 描画ループ =====
       function draw() {
-        ctx.clearRect(0, 0, vw, vh);
+        ctx.clearRect(0, 0, width, height);
 
-        // フェード中はglobalAlphaを適用
-        if (enableFadeOut) ctx.globalAlpha = globalAlpha;
-
-        for (const c of confetti) {
+        confetti.forEach((c) => {
           ctx.beginPath();
           ctx.lineWidth = c.r;
           ctx.strokeStyle = c.color;
           ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
           ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
           ctx.stroke();
-        }
+        });
 
-        if (enableFadeOut) ctx.globalAlpha = 1; // 他描画への影響を避ける
-
-        if (isFalling) update();
+        update();
         requestAnimationFrame(draw);
       }
 
-      // ====== 位置更新 ======
+      // ===== 紙吹雪の位置更新 =====
       function update() {
-        for (const c of confetti) {
+        confetti.forEach((c) => {
           c.tiltAngle += c.tiltAngleIncrement;
-          c.y += (Math.cos(c.d) + 3 + c.r / 2) * fallSpeed; // 縦移動
-          c.x += Math.sin(c.d);                              // 横揺れ
+          c.y += (Math.cos(c.d) + 3 + c.r / 2) * fallSpeed;
+          c.x += Math.sin(c.d);
           c.tilt = Math.sin(c.tiltAngle) * 10;
+        });
 
-          // 画面外に落ちたら上から再出現（停止時は行わないのでOK）
-          if (c.y > vh) {
-            c.y = -10;
-            c.x = Math.random() * vw;
+        // 画面外に落ちた紙吹雪を削除
+        for (let i = confetti.length - 1; i >= 0; i--) {
+          if (confetti[i].y > height + 20) {
+            confetti.splice(i, 1);
           }
         }
+
+        // 紙吹雪を出す時間内は補充し続ける
+        if (isGenerating && confetti.length < confettiCount) {
+          confetti.push(createConfettiPiece());
+        }
       }
+
+      // ===== 3秒後に新規生成を止める =====
+      setTimeout(() => {
+        isGenerating = false;
+      }, durationMs);
 
       requestAnimationFrame(draw);
     });
   </script>
 </body>
 </html>
-
