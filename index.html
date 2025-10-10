@@ -9,8 +9,8 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: #ffffff;
-      font-family: "Arial", sans-serif;
+      background: #fff;
+      font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -18,25 +18,10 @@
       min-height: 100vh;
       text-align: center;
     }
-
-    h1 {
-      font-size: 2rem;
-      color: #333;
-      margin: 20px;
-    }
-
-    .note {
-      font-size: 0.9rem;
-      color: #666;
-      margin-top: 10px;
-    }
-
+    h1 { font-size: 2rem; color: #333; margin: 20px; }
+    .note { font-size: .9rem; color: #666; margin-top: 10px; }
     canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      z-index: -1;
-      pointer-events: none;
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
     }
   </style>
 </head>
@@ -58,85 +43,115 @@
 
       // ===== 設定 =====
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      const fallSpeed = isMobile ? 0.65 : 0.35; // 紙吹雪の落下スピード
-      const confettiCount = 150; // 紙吹雪の数
-      const durationMs = 3000; // 紙吹雪を出し続ける時間（3秒）
+      const fallSpeed = isMobile ? 0.65 : 0.35;       // 縦方向の基本スピード
+      const emissionDurationMs = 3000;                // 生成する時間（3秒）
+      const ratePerSec = isMobile ? 140 : 110;        // 1秒あたりの生成数（分散）
+      const maxAlive = 600;                            // 同時在籍上限（安全弁）
+      const spawnTopMargin = 40;                      // 画面上の出現開始位置
+      const spawnSideMargin = 20;                     // 左右に少し余白を持たせる
 
-      let width = (canvas.width = window.innerWidth);
-      let height = (canvas.height = window.innerHeight);
+      // 横風ノイズ（時間でゆっくり変化）
+      const windAmplitude = isMobile ? 0.45 : 0.35;   // 横風の強さ
+      const windFreq = 0.0006;                        // 風の変化速度（小さいほどゆっくり）
 
+      // キャンバスサイズ
+      let W = canvas.width = window.innerWidth;
+      let H = canvas.height = window.innerHeight;
       window.addEventListener("resize", () => {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = window.innerHeight;
       });
 
+      // 粒データ
       const confetti = [];
-      let isGenerating = true; // 紙吹雪を出す期間
+      let generating = true;
 
-      // ===== 紙吹雪を作る関数 =====
-      function createConfettiPiece() {
+      // タイム管理（レート制御）
+      let startTime = performance.now();
+      let lastTime = startTime;
+      let spawnAccumulator = 0; // 何粒生成するかの小数累積
+
+      // 生成関数（分散＋色相分布）
+      function createPiece() {
+        // 画面全幅＋左右マージン内でランダム出現
+        const x = Math.random() * (W + spawnSideMargin * 2) - spawnSideMargin;
+        const y = -spawnTopMargin - Math.random() * 60;  // 画面少し上から
+        const r = Math.random() * 5 + 2.5;               // 太さ抑えめで密度感
+        // 色相をいくつかのクラスタに分けつつランダムで偏りを軽減
+        const hueBases = [10, 45, 180, 220, 290, 330];
+        const hue = hueBases[Math.floor(Math.random() * hueBases.length)] + Math.random() * 20 - 10;
         return {
-          x: Math.random() * width,
-          y: -10,
-          r: Math.random() * 6 + 4,
-          d: Math.random() * confettiCount,
-          color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+          x, y, r,
+          d: Math.random() * 1000, // 位相
+          color: `hsl(${(hue + 360) % 360}, 100%, 70%)`,
           tilt: Math.random() * 10 - 5,
-          tiltAngle: 0,
-          tiltAngleIncrement: Math.random() * 0.1 + 0.05
+          tiltAngle: Math.random() * Math.PI * 2,
+          tiltAngleIncrement: Math.random() * 0.08 + 0.02,
+          // 個体ごとの横風感度と落下係数にばらつき
+          windScale: Math.random() * 0.6 + 0.7,
+          fallScale: Math.random() * 0.6 + 0.7
         };
       }
 
-      // 初期生成
-      for (let i = 0; i < confettiCount; i++) {
-        confetti.push(createConfettiPiece());
+      function drawPiece(p) {
+        ctx.beginPath();
+        ctx.lineWidth = p.r;
+        ctx.strokeStyle = p.color;
+        ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+        ctx.stroke();
       }
 
-      // ===== 描画ループ =====
-      function draw() {
-        ctx.clearRect(0, 0, width, height);
+      function updatePiece(p, t) {
+        // グローバル風（時間変化）＋個体差
+        const wind = Math.sin(t * windFreq + p.d * 0.01) * windAmplitude * p.windScale;
+        p.tiltAngle += p.tiltAngleIncrement;
+        p.tilt = Math.sin(p.tiltAngle) * 10;
 
-        confetti.forEach((c) => {
-          ctx.beginPath();
-          ctx.lineWidth = c.r;
-          ctx.strokeStyle = c.color;
-          ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
-          ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.r / 2);
-          ctx.stroke();
-        });
-
-        update();
-        requestAnimationFrame(draw);
+        // 位置更新：横は風、縦は基本速度＋個体差
+        p.x += wind + Math.sin(p.d * 0.02) * 0.3;
+        p.y += (Math.cos(p.d * 0.02) + 3 + p.r / 2) * fallSpeed * p.fallScale;
       }
 
-      // ===== 紙吹雪の位置更新 =====
-      function update() {
-        confetti.forEach((c) => {
-          c.tiltAngle += c.tiltAngleIncrement;
-          c.y += (Math.cos(c.d) + 3 + c.r / 2) * fallSpeed;
-          c.x += Math.sin(c.d);
-          c.tilt = Math.sin(c.tiltAngle) * 10;
-        });
+      function animate(now) {
+        const elapsed = now - startTime;
+        const dt = Math.max(0, now - lastTime);
+        lastTime = now;
 
-        // 画面外に落ちた紙吹雪を削除
-        for (let i = confetti.length - 1; i >= 0; i--) {
-          if (confetti[i].y > height + 20) {
-            confetti.splice(i, 1);
+        ctx.clearRect(0, 0, W, H);
+
+        // 3秒間は一定レートで少しずつ生成（初期一括生成はしない）
+        if (generating) {
+          spawnAccumulator += (ratePerSec * dt) / 1000; // 生成予定数を累積
+          let toSpawn = Math.floor(spawnAccumulator);
+          spawnAccumulator -= toSpawn;
+
+          // 1フレームで生成しすぎないように上限
+          toSpawn = Math.min(toSpawn, 30);
+          while (toSpawn-- > 0 && confetti.length < maxAlive) {
+            confetti.push(createPiece());
           }
+
+          if (elapsed >= emissionDurationMs) generating = false;
         }
 
-        // 紙吹雪を出す時間内は補充し続ける
-        if (isGenerating && confetti.length < confettiCount) {
-          confetti.push(createConfettiPiece());
+        // 更新＆描画
+        for (let i = confetti.length - 1; i >= 0; i--) {
+          const p = confetti[i];
+          updatePiece(p, now);
+          drawPiece(p);
+
+          // 画面外に落ち切ったら削除（残さない）
+          if (p.y > H + 30) confetti.splice(i, 1);
         }
+
+        // 生成終了後、全て落ち切ったらループ停止（省リソース）
+        if (!generating && confetti.length === 0) return;
+
+        requestAnimationFrame(animate);
       }
 
-      // ===== 3秒後に新規生成を止める =====
-      setTimeout(() => {
-        isGenerating = false;
-      }, durationMs);
-
-      requestAnimationFrame(draw);
+      requestAnimationFrame(animate);
     });
   </script>
 </body>
