@@ -20,6 +20,34 @@
     }
     h1 { font-size: 2rem; color: #333; margin: 20px; }
     .note { font-size: .9rem; color: #666; margin-top: 10px; }
+
+    /* ▼ ここからボタン用スタイル */
+    .button-wrap {
+      margin-top: 32px;
+    }
+    .line-btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 999px;
+      background: #06c755; /* LINEっぽいグリーン */
+      color: #fff;
+      font-size: 1rem;
+      font-weight: bold;
+      text-decoration: none;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, .15);
+      transition: transform .1s ease, box-shadow .1s ease, opacity .1s ease;
+    }
+    .line-btn:hover {
+      opacity: .95;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, .18);
+    }
+    .line-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, .12);
+    }
+    /* ▲ ボタン用スタイルここまで */
+
     canvas {
       position: fixed;
       inset: 0;
@@ -36,6 +64,19 @@
     <p>もし届いていない場合は、迷惑メールを確認の上で以下のアドレス宛にお問い合わせください</p>
     <p>メール：monetizecamp@buzzsns.com</p>
   </div>
+
+  <!-- ▼ 追加したボタンエリア -->
+  <div class="button-wrap">
+    <a
+      href="https://liff.line.me/2008111100-a5oMX8Y7/landing?follow=%40115dqafg&lp=barLe0&liff_id=2008111100-a5oMX8Y7"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="line-btn"
+    >
+      LINEで受け取り専用ページを開く
+    </a>
+  </div>
+  <!-- ▲ 追加したボタンエリア -->
 
   <canvas id="confettiCanvas"></canvas>
 
